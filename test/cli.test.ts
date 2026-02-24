@@ -31,9 +31,10 @@ describe("CLI bootstrap behavior", () => {
   afterEach(() => {
     process.chdir(originalCwd);
   });
-  it("shows help and exits 0 for --help", () => {
+
+  it("shows help and exits 0 for --help", async () => {
     const { io, stdout, stderr } = createIO();
-    const code = runCli(["--help"], io);
+    const code = await runCli(["--help"], io);
 
     expect(code).toBe(0);
     expect(stdout.data).toBe("");
@@ -41,21 +42,21 @@ describe("CLI bootstrap behavior", () => {
     expect(stderr.data).toContain("gate init [--force]");
   });
 
-  it("shows help and exits 0 with no args", () => {
+  it("shows help and exits 0 with no args", async () => {
     const { io, stdout, stderr } = createIO();
-    const code = runCli([], io);
+    const code = await runCli([], io);
 
     expect(code).toBe(0);
     expect(stdout.data).toBe("");
     expect(stderr.data).toContain("Usage:");
   });
 
-  it("runs init stub and exits 0", () => {
+  it("runs init stub and exits 0", async () => {
     const tmp = mkdtempSync(join(tmpdir(), "gate-init-"));
     process.chdir(tmp);
 
     const { io, stdout, stderr } = createIO();
-    const code = runCli(["init"], io);
+    const code = await runCli(["init"], io);
 
     expect(code).toBe(0);
     expect(stdout.data).toBe("");
@@ -74,7 +75,7 @@ describe("CLI bootstrap behavior", () => {
     expect(stderr.data).toContain("Wrote gate.config.yml");
   });
 
-  it("fails clearly if config already exists without --force", () => {
+  it("fails clearly if config already exists without --force", async () => {
     const tmp = mkdtempSync(join(tmpdir(), "gate-init-existing-"));
     process.chdir(tmp);
 
@@ -82,7 +83,7 @@ describe("CLI bootstrap behavior", () => {
     writeFileSync(targetPath, "# existing config\n");
 
     const { io, stdout, stderr } = createIO();
-    const code = runCli(["init"], io);
+    const code = await runCli(["init"], io);
 
     expect(code).toBe(2);
     expect(stdout.data).toBe("");
@@ -91,7 +92,7 @@ describe("CLI bootstrap behavior", () => {
     expect(stderr.data).toContain("--force");
   });
 
-  it("overwrites existing config when --force is provided", () => {
+  it("overwrites existing config when --force is provided", async () => {
     const tmp = mkdtempSync(join(tmpdir(), "gate-init-force-"));
     process.chdir(tmp);
 
@@ -99,7 +100,7 @@ describe("CLI bootstrap behavior", () => {
     writeFileSync(targetPath, "# old config\n");
 
     const { io, stdout, stderr } = createIO();
-    const code = runCli(["init", "--force"], io);
+    const code = await runCli(["init", "--force"], io);
 
     expect(code).toBe(0);
     expect(stdout.data).toBe("");
@@ -115,36 +116,27 @@ describe("CLI bootstrap behavior", () => {
     expect(stderr.data).toContain("Wrote gate.config.yml");
   });
 
-  it("errors with exit 2 when run is missing phase", () => {
+  it("errors with exit 2 when run is missing phase", async () => {
     const { io, stdout, stderr } = createIO();
-    const code = runCli(["run"], io);
+    const code = await runCli(["run"], io);
 
     expect(code).toBe(2);
     expect(stdout.data).toBe("");
     expect(stderr.data.trim()).toBe("Missing phase name. Usage: gate run <phase>");
   });
 
-  it("runs run stub with phase and exits 0", () => {
+  it("runs claude bundle stub with phase and exits 0", async () => {
     const { io, stdout, stderr } = createIO();
-    const code = runCli(["run", "fast"], io);
-
-    expect(code).toBe(0);
-    expect(stdout.data).toBe("");
-    expect(stderr.data.trim()).toBe("run stub (phase: fast)");
-  });
-
-  it("runs claude bundle stub with phase and exits 0", () => {
-    const { io, stdout, stderr } = createIO();
-    const code = runCli(["claude", "bundle", "pr"], io);
+    const code = await runCli(["claude", "bundle", "pr"], io);
 
     expect(code).toBe(0);
     expect(stdout.data).toBe("");
     expect(stderr.data.trim()).toBe("claude bundle stub (phase: pr)");
   });
 
-  it("errors with exit 2 for unknown command", () => {
+  it("errors with exit 2 for unknown command", async () => {
     const { io, stdout, stderr } = createIO();
-    const code = runCli(["unknown"], io);
+    const code = await runCli(["unknown"], io);
 
     expect(code).toBe(2);
     expect(stdout.data).toBe("");

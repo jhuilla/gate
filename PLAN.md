@@ -342,7 +342,7 @@ Across all phases, follow **TDD**:
 - **Exit (all green)**
   - `gate init` creates a valid config; bad configs produce a clear error; all config tests pass.
 
-### Phase 2 — Runner (TODO)
+### Phase 2 — Runner (DONE)
 
 - **Tests first**
   - Integration-style tests around `runner.ts` that:

@@ -1,0 +1,15 @@
+version: 1
+
+phases:
+  fast:
+    - slow
+
+gates:
+  slow:
+    command: node slow.js
+    timeout: 1
+
+options:
+  logTailLines: 50
+  stopOnFirstFailure: true
+

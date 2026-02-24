@@ -1,0 +1,23 @@
+version: 1
+
+phases:
+  fast:
+    - pass
+    - fail
+    - after
+
+gates:
+  pass:
+    command: node pass.js
+    timeout: 10
+  fail:
+    command: node fail.js
+    timeout: 10
+  after:
+    command: node after.js
+    timeout: 10
+
+options:
+  logTailLines: 50
+  stopOnFirstFailure: true
+
