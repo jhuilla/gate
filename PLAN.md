@@ -363,6 +363,27 @@ Across all phases, follow **TDD**:
 - **Exit (all green)**
   - On a real TS repo, `gate run fast` and `gate run fast --format json` behave per contract, and all runner tests pass.
 
+### Phase 2.5 — Self-gating (TODO)
+
+- **Tests first**
+  - Integration tests that invoke the built CLI from this repo root (or a temp copy of it) with a real `gate.config.yml` for `gate` itself.
+  - Assert `gate run fast` on this repo:
+    - Exits 0 when the repo is healthy.
+    - Produces no stdout in human mode and sends progress/logs to stderr.
+  - Assert `gate run fast --format json` on this repo:
+    - Exits 0 when healthy and emits JSON matching the contract.
+    - Still routes all human-readable logs to stderr.
+  - Introduce a controlled failure (e.g. a broken `tsc` or test command) in a temp copy of this repo and assert:
+    - Exit code 1 on gate failure, with `failedGate` and `failedGates` populated correctly.
+    - The JSON output and log tail accurately reflect the failure.
+- **Implementation**
+  - Add and maintain a `gate.config.yml` at the root of this repo that defines `fast` / `pr` phases and gates (lint, typecheck, test, build) appropriate for `gate` itself.
+  - Ensure `pnpm` scripts and local tooling in this repo match the commands referenced in the self-gating config.
+  - Wire the integration tests to use the built CLI (or a near-identical in-process entry) so they exercise the full runner path.
+- **Exit (all green)**
+  - This repo can successfully run `gate run fast` and `gate run fast --format json` against itself and behave exactly as a “regular” TS repo would.
+  - A CI job (even if minimal) exists that runs `gate run fast` on this repo and will fail if gates fail, making `gate` self-gating in practice.
+
 ### Phase 3 — tsc parser (TODO)
 
 - **Tests first**
