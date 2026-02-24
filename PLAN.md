@@ -305,54 +305,106 @@ Day-1 only `json` is supported for `--format`. Other formats (e.g. yaml) may be 
 
 ## Build phases
 
+Across all phases, follow **TDD**:
+
+1. Start by writing or updating automated tests that encode the phase's exit criteria.
+2. Run tests and see them fail for the right reason.
+3. Implement the minimum code to make the new tests pass.
+4. Refactor while keeping the suite green.
+
 ### Phase 0 — Bootstrap
 
-Working TS CLI skeleton with command routing. `gate --help` works. All subcommands are callable stubs.
-
-Exit: `gate init` and `gate run` are reachable without crashing.
+- **Tests first**
+  - Add a small smoke-test suite around the CLI entry (e.g., via `vitest` or another test runner) that:
+    - Asserts `gate --help` exits 0 and prints usage text.
+    - Asserts `gate init --help` and `gate run --help` are wired and exit 0.
+  - These tests can shell out to the built CLI or invoke the command router directly.
+- **Implementation**
+  - Implement the minimal TS CLI skeleton with command routing so the above tests pass.
+  - Ensure all subcommands exist as callable stubs.
+- **Exit (all green)**
+  - `gate init` and `gate run` are reachable without crashing, and the CLI smoke tests pass.
 
 ### Phase 1 — Config
 
-* YAML load with zod schema validation.
-* `gate init` writes template; fails clearly if config already exists (require `--force` to overwrite).
-* Config error exits with code 2 and a readable message pointing to the offending field.
-
-Exit: `gate init` creates a valid config; bad configs produce a clear error.
+- **Tests first**
+  - Unit tests for `config.ts` that:
+    - Load a valid `gate.config.yml` and assert the parsed structure matches the schema.
+    - Cover representative invalid configs (missing phase, empty phase, bad gate field, wrong types) and assert:
+      - Exit code 2 is used for config errors.
+      - Error messages point to the offending field.
+  - Tests for `gate init` that:
+    - Assert it writes the default template when no config exists.
+    - Assert it fails clearly if the config already exists, and only overwrites with `--force`.
+- **Implementation**
+  - Implement YAML load with zod schema validation to satisfy the tests.
+  - Implement `gate init` behavior and error mapping so tests for exit codes and messages pass.
+- **Exit (all green)**
+  - `gate init` creates a valid config; bad configs produce a clear error; all config tests pass.
 
 ### Phase 2 — Runner
 
-* Spawn via `sh -c`, `detached: true`, merged stdout/stderr buffer with cap.
-* Timeout + process-group SIGTERM → SIGKILL.
-* Detect exit code 127 and emit the structured command-not-found message.
-* Collect exit code, duration, log tail.
-* Assemble JSON result per contract, including `skip` entries.
-* `--format json`: JSON to stdout, all progress and logs to stderr. Reject unsupported format values with exit 2.
-
-Exit: on a real TS repo, `gate run fast` and `gate run fast --format json` produce correct pass/fail and valid JSON when format is json.
+- **Tests first**
+  - Integration-style tests around `runner.ts` that:
+    - Run against a small fixture repo with a simple `gate.config.yml`.
+    - Assert `gate run fast`:
+      - Returns correct exit codes for passing and failing gates.
+      - Produces no stdout (human mode) and writes progress/logs to stderr.
+    - Assert `gate run fast --format json`:
+      - Emits valid JSON matching the contract (statuses, `failedGate`, `failedGates`, `skip` entries, `exitCode: null` for skipped).
+      - Sends all human-readable logs to stderr only.
+    - Simulate a command timing out and assert timeout behavior (exit code, log tail, and process group cleanup if observable).
+    - Simulate a command-not-found case and assert exit code 1 plus the structured 127-message is present in stderr and `logTail`.
+    - Assert unsupported `--format` values exit 2 with a clear error.
+- **Implementation**
+  - Implement process spawning via `sh -c` with `detached: true`, merged stdout/stderr buffer, and cap.
+  - Implement timeout and process-group SIGTERM → SIGKILL.
+  - Implement JSON assembly per contract and `--format` behavior to satisfy the tests.
+- **Exit (all green)**
+  - On a real TS repo, `gate run fast` and `gate run fast --format json` behave per contract, and all runner tests pass.
 
 ### Phase 3 — tsc parser
 
-* Parse tsc output: `path(line,col): error TSxxxx: message`
-* Day-1: only the first line of each multi-line `tsc` error is parsed; wrapped lines are ignored.
-* Cap at 20 highlights.
-* All other gates: log tail only.
-
-Exit: typecheck failures show structured highlights in JSON and bundle.
+- **Tests first**
+  - Unit tests for `parse.ts` that:
+    - Feed representative `tsc` output strings and assert parsed highlights contain correct `file`, `line`, `col`, `message`, and `tool: "tsc"`.
+    - Include multi-line errors and assert only the first line is parsed.
+    - Include >20 errors and assert the highlights array is capped at 20.
+  - Integration tests that run a failing `typecheck` gate and assert:
+    - JSON output includes structured highlights for tsc.
+    - Non-`tsc` gates still only include log tails.
+- **Implementation**
+  - Implement the tsc parser with the described constraints and integrate it into the runner.
+- **Exit (all green)**
+  - Typecheck failures show structured highlights in JSON and bundle, and all parser tests pass.
 
 ### Phase 4 — Claude bundle
 
-* `bundle.ts` converts a JSON result into the repair bundle text.
-* `gate claude bundle <phase>` runs the phase, writes progress to stderr, writes bundle to stdout on failure.
-* Only print `cwd` in bundle when it differs from repo root.
-* Validate on a real failing repo with an actual Claude Code session — not just visual inspection. The format may need a tweak after a live test.
-
-Exit: the manual loop works end-to-end at least once with a real Claude session.
+- **Tests first**
+  - Unit tests for `bundle.ts` that:
+    - Given a failing JSON result with one failed gate, assert the rendered text matches the bundle contract (sections, wording, highlights, log tail).
+    - Given multiple failed gates, assert one FAILED GATE block per failed gate in phase order.
+    - Assert `cwd` appears only when it differs from the repo root.
+  - Integration tests for `gate claude bundle <phase>` that:
+    - Run on a small fixture repo with a known failing gate.
+    - Assert progress goes to stderr, and stdout contains either nothing (pass) or a well-formed bundle (fail).
+- **Implementation**
+  - Implement `bundle.ts` and wire `gate claude bundle <phase>` to the runner and bundler so the tests pass.
+- **Exit (all green)**
+  - The manual loop works end-to-end at least once with a real Claude session, and the bundle tests pass.
 
 ### Phase 5 — Polish
 
-* README quickstart: install, init, run, Claude loop.
-* Example GitHub Actions snippet.
-* Verify stdout/stderr separation and exit codes under CI-like conditions.
+- **Tests first**
+  - Lightweight tests or scripts that:
+    - Exercise the documented README quickstart commands (`init`, `run`, `claude bundle`) in a fixture repo to prevent regressions.
+    - Exercise the example GitHub Actions snippet in a dry-run or local CI harness where feasible.
+    - Assert stdout/stderr separation and exit codes still match the contract in these flows.
+- **Implementation**
+  - Write and polish the README quickstart and CI examples.
+  - Adjust CLI ergonomics and messaging as needed to keep the tests passing.
+- **Exit (all green)**
+  - Docs and examples reflect the actual behavior of the tool, and the high-level integration tests remain green.
 
 ---
 
