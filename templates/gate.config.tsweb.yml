@@ -1,0 +1,33 @@
+version: 1
+
+phases:
+  fast:
+    - lint
+    - typecheck
+    - test
+  pr:
+    - lint
+    - typecheck
+    - test
+    - build
+
+gates:
+  lint:
+    command: pnpm -s eslint .
+    timeout: 60
+  typecheck:
+    command: pnpm -s tsc --noEmit
+    timeout: 120
+  test:
+    command: pnpm -s vitest run
+    timeout: 120
+  build:
+    command: pnpm -s build
+    timeout: 180
+
+options:
+  logTailLines: 50
+  stopOnFirstFailure: true
+
+# Verify these commands match your repo before running.
+

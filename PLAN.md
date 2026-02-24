@@ -325,7 +325,7 @@ Across all phases, follow **TDD**:
 - **Exit (all green)**
   - `gate init` and `gate run` are reachable without crashing, and the CLI smoke tests pass.
 
-### Phase 1 — Config (TODO)
+### Phase 1 — Config (DONE)
 
 - **Tests first**
   - Unit tests for `config.ts` that:

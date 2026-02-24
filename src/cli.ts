@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 export type ExitCode = 0 | 1 | 2;
 
 export interface CliIO {
@@ -20,10 +24,15 @@ Usage:
   io.stderr.write(text);
 }
 
+function getTemplatePath(): string {
+  const here = fileURLToPath(import.meta.url);
+  return resolve(dirname(here), "../templates/gate.config.tsweb.yml");
+}
+
 export function runCli(args: string[], io: CliIO): ExitCode {
-  const cmd = args[0];
-  const sub = args[1];
-  const phase = args[2];
+  const [cmd, ...rest] = args;
+  const sub = rest[0];
+  const phase = rest[1];
 
   // No args or --help / -h
   if (cmd === undefined || cmd === "--help" || cmd === "-h") {
@@ -32,7 +41,31 @@ export function runCli(args: string[], io: CliIO): ExitCode {
   }
 
   if (cmd === "init") {
-    io.stderr.write("init stub\n");
+    const force = rest.includes("--force");
+
+    const targetPath = resolve(process.cwd(), "gate.config.yml");
+    if (existsSync(targetPath) && !force) {
+      io.stderr.write(
+        "gate.config.yml already exists. Use --force to overwrite.\n",
+      );
+      return 2;
+    }
+
+    const templatePath = getTemplatePath();
+    let template: string;
+    try {
+      template = readFileSync(templatePath, "utf8");
+    } catch (err) {
+      io.stderr.write(
+        `Failed to read embedded template at '${templatePath}': ${(err as Error).message}\n`,
+      );
+      return 2;
+    }
+
+    writeFileSync(targetPath, template);
+    io.stderr.write(
+      "Wrote gate.config.yml from template. Verify these commands match your repo before running.\n",
+    );
     return 0;
   }
 

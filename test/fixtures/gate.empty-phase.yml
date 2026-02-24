@@ -1,0 +1,9 @@
+version: 1
+
+phases:
+  fast: []
+
+gates:
+  lint:
+    command: pnpm -s eslint .
+

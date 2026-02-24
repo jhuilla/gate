@@ -1,6 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { runCli, type CliIO } from "../src/cli";
 import { Writable } from "node:stream";
+import { mkdtempSync, writeFileSync, readFileSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve as resolvePath } from "node:path";
 
 class StringWriter extends Writable {
   data = "";
@@ -23,6 +26,11 @@ function createIO(): { io: CliIO; stdout: StringWriter; stderr: StringWriter } {
 }
 
 describe("CLI bootstrap behavior", () => {
+  const originalCwd = process.cwd();
+
+  afterEach(() => {
+    process.chdir(originalCwd);
+  });
   it("shows help and exits 0 for --help", () => {
     const { io, stdout, stderr } = createIO();
     const code = runCli(["--help"], io);
@@ -43,12 +51,68 @@ describe("CLI bootstrap behavior", () => {
   });
 
   it("runs init stub and exits 0", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "gate-init-"));
+    process.chdir(tmp);
+
     const { io, stdout, stderr } = createIO();
     const code = runCli(["init"], io);
 
     expect(code).toBe(0);
     expect(stdout.data).toBe("");
-    expect(stderr.data.trim()).toBe("init stub");
+
+    const writtenPath = resolvePath(tmp, "gate.config.yml");
+    expect(existsSync(writtenPath)).toBe(true);
+
+    const written = readFileSync(writtenPath, "utf8");
+    const templatePath = resolvePath(
+      __dirname,
+      "../templates/gate.config.tsweb.yml",
+    );
+    const template = readFileSync(templatePath, "utf8");
+
+    expect(written).toBe(template);
+    expect(stderr.data).toContain("Wrote gate.config.yml");
+  });
+
+  it("fails clearly if config already exists without --force", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "gate-init-existing-"));
+    process.chdir(tmp);
+
+    const targetPath = resolvePath(tmp, "gate.config.yml");
+    writeFileSync(targetPath, "# existing config\n");
+
+    const { io, stdout, stderr } = createIO();
+    const code = runCli(["init"], io);
+
+    expect(code).toBe(2);
+    expect(stdout.data).toBe("");
+    expect(readFileSync(targetPath, "utf8")).toBe("# existing config\n");
+    expect(stderr.data).toContain("already exists");
+    expect(stderr.data).toContain("--force");
+  });
+
+  it("overwrites existing config when --force is provided", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "gate-init-force-"));
+    process.chdir(tmp);
+
+    const targetPath = resolvePath(tmp, "gate.config.yml");
+    writeFileSync(targetPath, "# old config\n");
+
+    const { io, stdout, stderr } = createIO();
+    const code = runCli(["init", "--force"], io);
+
+    expect(code).toBe(0);
+    expect(stdout.data).toBe("");
+
+    const written = readFileSync(targetPath, "utf8");
+    const templatePath = resolvePath(
+      __dirname,
+      "../templates/gate.config.tsweb.yml",
+    );
+    const template = readFileSync(templatePath, "utf8");
+
+    expect(written).toBe(template);
+    expect(stderr.data).toContain("Wrote gate.config.yml");
   });
 
   it("errors with exit 2 when run is missing phase", () => {

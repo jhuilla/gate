@@ -1,0 +1,10 @@
+version: "1"
+
+phases:
+  fast:
+    - lint
+
+gates:
+  lint:
+    command: 123
+
