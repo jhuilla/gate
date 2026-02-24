@@ -312,7 +312,7 @@ Across all phases, follow **TDD**:
 3. Implement the minimum code to make the new tests pass.
 4. Refactor while keeping the suite green.
 
-### Phase 0 — Bootstrap
+### Phase 0 — Bootstrap (DONE)
 
 - **Tests first**
   - Add a small smoke-test suite around the CLI entry (e.g., via `vitest` or another test runner) that:
@@ -325,7 +325,7 @@ Across all phases, follow **TDD**:
 - **Exit (all green)**
   - `gate init` and `gate run` are reachable without crashing, and the CLI smoke tests pass.
 
-### Phase 1 — Config
+### Phase 1 — Config (TODO)
 
 - **Tests first**
   - Unit tests for `config.ts` that:
@@ -342,7 +342,7 @@ Across all phases, follow **TDD**:
 - **Exit (all green)**
   - `gate init` creates a valid config; bad configs produce a clear error; all config tests pass.
 
-### Phase 2 — Runner
+### Phase 2 — Runner (TODO)
 
 - **Tests first**
   - Integration-style tests around `runner.ts` that:
@@ -363,7 +363,7 @@ Across all phases, follow **TDD**:
 - **Exit (all green)**
   - On a real TS repo, `gate run fast` and `gate run fast --format json` behave per contract, and all runner tests pass.
 
-### Phase 3 — tsc parser
+### Phase 3 — tsc parser (TODO)
 
 - **Tests first**
   - Unit tests for `parse.ts` that:
@@ -378,7 +378,7 @@ Across all phases, follow **TDD**:
 - **Exit (all green)**
   - Typecheck failures show structured highlights in JSON and bundle, and all parser tests pass.
 
-### Phase 4 — Claude bundle
+### Phase 4 — Claude bundle (TODO)
 
 - **Tests first**
   - Unit tests for `bundle.ts` that:
@@ -393,7 +393,7 @@ Across all phases, follow **TDD**:
 - **Exit (all green)**
   - The manual loop works end-to-end at least once with a real Claude session, and the bundle tests pass.
 
-### Phase 5 — Polish
+### Phase 5 — Polish (TODO)
 
 - **Tests first**
   - Lightweight tests or scripts that:
