@@ -15,7 +15,7 @@ Everything else is secondary.
 ## Definition of done
 
 1. `gate run <phase>` executes gates in order, stops on first failure by default, exits non-zero on failure.
-2. `gate run <phase> --json` emits structured JSON to stdout; human-readable logs go to stderr.
+2. `gate run <phase> --format json` emits structured JSON to stdout and human-readable logs to stderr. Without `--format`, stdout is empty and all human-readable progress and logs go to stderr (maximum scriptability: stdout is a pure data channel only when a format is requested). If `--format` is given with an unsupported value, exit code 2 and a clear error (e.g. "Unsupported format 'x'. Supported: json.").
 3. `gate claude bundle <phase>` runs the phase and either exits 0 (pass) or prints a repair bundle to stdout and exits non-zero. Gate progress goes to stderr as normal; stdout contains only the bundle or nothing.
 4. `tsc` errors are parsed into structured highlights (file/line/col/message).
 5. All other tool output is passed through as a bounded log tail — no parsing, no magic.
@@ -63,7 +63,7 @@ gate/
 
 ## Config format
 
-`gate.config.yml` — kept in the repo root, committed.
+`gate.config.yml` — kept in the repo root, committed. Repo root is the directory containing the loaded config file (the default `gate.config.yml`, or the path given via `--config`).
 
 ```yaml
 version: 1
@@ -104,21 +104,22 @@ options:
 gates:
   test:
     command: pnpm -s vitest run
-    cwd: apps/web          # relative to repo root; defaults to repo root
+    cwd: apps/web          # relative to repo root (directory containing the config file); defaults to repo root
     env:
       CI: "1"              # merged over process.env; never appears in output
 ```
 
-* `cwd`: working directory for the gate. Defaults to repo root.
+* `cwd`: working directory for the gate. Defaults to the repo root (directory containing the config file).
 * `env`: environment variables merged over `process.env` at spawn time. **Never included in JSON output or repair bundles** — the risk of leaking secrets to CI logs or Claude sessions is too high. If you need to debug env issues, add a temporary `echo` to your command.
 
 `gate init` writes the default template and exits. It does not inspect `package.json` or infer scripts. The generated file includes a comment: "Verify these commands match your repo before running."
+The template is loaded from the published package directory (e.g., alongside the compiled CLI entry), so `gate init` works from any install location. The build/publish step must include `templates/gate.config.tsweb.yml` in the package.
 
 ---
 
 ## JSON output contract
 
-`gate run <phase> --json` emits to stdout:
+Structured output is only produced when `--format json` is passed. `gate run <phase> --format json` emits to stdout:
 
 ```json
 {
@@ -128,6 +129,7 @@ gates:
   "startedAt": "2025-01-01T00:00:00.000Z",
   "durationMs": 8312,
   "failedGate": "typecheck",
+  "failedGates": ["typecheck"],
   "gates": [
     {
       "name": "lint",
@@ -184,6 +186,10 @@ Notes:
 * `cwd` and `env` are never included in JSON output.
 * `exitCode` is `null` for skipped gates.
 * If `stopOnFirstFailure` is false, all gates run and each is `pass` or `fail`.
+* When `status` is `"fail"`, `failedGate` is the first failed gate name and `failedGates` contains all failed gate names in phase order.
+* When `status` is `"pass"`, `failedGate` is `null` and `failedGates` is an empty array `[]`.
+* A phase with zero gates is a config error; the run exits with code `2` and a clear message indicating the empty phase.
+* If `--format` is omitted, no structured output is produced (human mode only). If `--format <value>` is given and the value is not supported, the run exits with code `2` and a message such as: `Unsupported format '<value>'. Supported: json.`
 
 ---
 
@@ -214,6 +220,8 @@ HIGHLIGHTS:
 LOG TAIL:
   [last 50 lines of combined stdout/stderr]
 
+When multiple gates fail in a single run (e.g. with `stopOnFirstFailure: false`), the bundle repeats the **FAILED GATE → HIGHLIGHTS → LOG TAIL** block once per failed gate, in phase order.
+
 ━━━ NEXT ━━━
 After making edits, the harness will rerun `gate run pr`.
 You do not need to run tests yourself.
@@ -236,7 +244,7 @@ You do not need to run tests yourself.
 |------|---------|
 | 0 | All gates passed |
 | 1 | One or more gates failed |
-| 2 | Config error, missing phase, command not found, or runtime error |
+| 2 | Config error, missing phase, unsupported `--format`, command not found, or runtime error |
 
 Stable and safe to rely on in CI and scripts.
 
@@ -255,6 +263,11 @@ sh -c "<command string>"
 * The spawned `sh` process must be started with `detached: true` so it leads its own process group. This is what makes group kill work reliably with pnpm child processes on macOS.
 
 Orphaned `tsc`/`vite`/`pnpm` processes must be handled — this is not best-effort.
+
+### stdout / stderr for `gate run`
+
+* **Without `--format`**: stdout is empty. All human-readable progress, summaries, and logs go to stderr (success or failure). Safe to run interactively or in scripts that rely only on exit code.
+* **With `--format json`**: stdout is the JSON payload only. All human-readable progress and logs still go to stderr. Safe to pipe stdout to another tool or parse as JSON.
 
 ### Exit code 127 handling
 
@@ -277,12 +290,14 @@ This replaces the generic log tail in both the human output and the `logTail` fi
 ## CLI commands (day-1)
 
 ```
-gate init                        write gate.config.yml if not present
-gate run <phase>                 run all gates for phase; progress to stderr
-gate run <phase> --json          same, emit JSON result to stdout
-gate run <phase> --config <path> use alternate config
-gate claude bundle <phase>       run phase; bundle to stdout if fail, exit 0 if pass
+gate init [--force]                  write gate.config.yml; fail if present unless --force
+gate run <phase>                     run all gates; stdout empty, progress/logs to stderr
+gate run <phase> --format json       same, emit JSON result to stdout; logs to stderr
+gate run <phase> --config <path>     use alternate config
+gate claude bundle <phase>            run phase; bundle to stdout if fail, exit 0 if pass
 ```
+
+Day-1 only `json` is supported for `--format`. Other formats (e.g. yaml) may be added later. If `--format` is given with an unsupported value, exit 2 with a clear error.
 
 `gate plan` is a small addition once the config loader exists — skip unless time permits.
 
@@ -311,13 +326,14 @@ Exit: `gate init` creates a valid config; bad configs produce a clear error.
 * Detect exit code 127 and emit the structured command-not-found message.
 * Collect exit code, duration, log tail.
 * Assemble JSON result per contract, including `skip` entries.
-* `--json`: JSON to stdout, all progress and logs to stderr.
+* `--format json`: JSON to stdout, all progress and logs to stderr. Reject unsupported format values with exit 2.
 
-Exit: on a real TS repo, `gate run fast` produces correct pass/fail and valid JSON.
+Exit: on a real TS repo, `gate run fast` and `gate run fast --format json` produce correct pass/fail and valid JSON when format is json.
 
 ### Phase 3 — tsc parser
 
 * Parse tsc output: `path(line,col): error TSxxxx: message`
+* Day-1: only the first line of each multi-line `tsc` error is parsed; wrapped lines are ignored.
 * Cap at 20 highlights.
 * All other gates: log tail only.
 
@@ -354,6 +370,8 @@ No special system prompt needed. The bundle is self-contained.
 
 ## Post-ship roadmap
 
+* Additional `--format` options (e.g. yaml)
+* Optional env guardrail (e.g. `GATE_REQUIRE_FORMAT=json` in CI to fail if `--format` is omitted)
 * eslint and vitest output parsers
 * `gate run --continue` (run all gates before stopping)
 * `gate plan` command
