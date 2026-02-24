@@ -9,15 +9,21 @@
     "build": "tsc",
     "start": "node dist/cli.js",
     "dev": "tsc && node dist/cli.js",
-    "test": "vitest"
+    "test": "vitest",
+    "lint": "eslint src test",
+    "lint:fix": "eslint src test --fix"
   },
   "dependencies": {
     "yaml": "^2.7.0",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.10.0",
+    "eslint": "^10.0.2",
+    "globals": "^17.3.0",
     "typescript": "^5.7.0",
+    "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"
   }
 }

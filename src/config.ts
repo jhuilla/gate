@@ -44,7 +44,7 @@ export interface GateConfig {
 }
 
 export class ConfigError extends Error {
-  readonly exitCode: 2 = 2;
+  readonly exitCode = 2 as const;
 
   constructor(message: string) {
     super(message);

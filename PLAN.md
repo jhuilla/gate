@@ -363,7 +363,7 @@ Across all phases, follow **TDD**:
 - **Exit (all green)**
   - On a real TS repo, `gate run fast` and `gate run fast --format json` behave per contract, and all runner tests pass.
 
-### Phase 2.5 — Self-gating (TODO)
+### Phase 2.5 — Self-gating (DONE)
 
 - **Tests first**
   - Integration tests that invoke the built CLI from this repo root (or a temp copy of it) with a real `gate.config.yml` for `gate` itself.

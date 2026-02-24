@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { runCli, type CliIO } from "../src/cli";
 import { Writable } from "node:stream";
 import { mkdtempSync, writeFileSync, readFileSync, existsSync } from "node:fs";

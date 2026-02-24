@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
-import type { CliIO, ExitCode } from "./cli";
-import { type GateConfig, type GateResultConfig, ConfigError } from "./config";
+import type { CliIO, ExitCode } from "./cli.js";
+import { type GateConfig, type GateResultConfig, ConfigError } from "./config.js";
 
 export interface PhaseResult {
   version: 1;
@@ -83,11 +83,12 @@ async function runSingleGate(
       const msg = `Gate '${name}' timed out after ${timeoutSeconds}s.\n`;
       append(msg);
       try {
-        if (child.pid != null) {
-          process.kill(-child.pid, "SIGTERM");
+        const pid = child.pid;
+        if (pid != null) {
+          process.kill(-pid, "SIGTERM");
           setTimeout(() => {
             try {
-              process.kill(-child.pid, "SIGKILL");
+              process.kill(-pid, "SIGKILL");
             } catch {
               // ignore
             }
@@ -98,7 +99,7 @@ async function runSingleGate(
       }
     }, timeoutMs);
 
-    child.on("close", (code: number | null, signal: NodeJS.Signals | null) => {
+    child.on("close", (code: number | null, _signal: NodeJS.Signals | null) => {
       clearTimeout(timeoutId);
       const durationMs = Date.now() - started;
 

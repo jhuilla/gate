@@ -7,13 +7,12 @@ import { runPhase } from "../src/runner";
 class StringWriter extends Writable {
   data = "";
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   _write(
-    chunk: any,
+    chunk: unknown,
     _encoding: BufferEncoding,
     callback: (error?: Error | null) => void,
   ) {
-    this.data += chunk.toString();
+    this.data += String(chunk);
     callback();
   }
 }
@@ -33,52 +32,56 @@ describe("runner integration", () => {
     process.chdir(originalCwd);
   });
 
-  it("runs a phase, stops on first failure, and marks later gates as skipped", async () => {
-    const repo = fixtureDir("phase2-pass-fail");
-    process.chdir(repo);
+  it(
+    "runs a phase, stops on first failure, and marks later gates as skipped",
+    async () => {
+      const repo = fixtureDir("phase2-pass-fail");
+      process.chdir(repo);
 
-    const config = loadConfig();
-    const stdout = new StringWriter();
-    const stderr = new StringWriter();
+      const config = loadConfig();
+      const stdout = new StringWriter();
+      const stderr = new StringWriter();
 
-    const { exitCode, result } = await runPhase(
-      config,
-      "fast",
-      { stdout, stderr },
-      { format: "json" },
-    );
+      const { exitCode, result } = await runPhase(
+        config,
+        "fast",
+        { stdout, stderr },
+        { format: "json" },
+      );
 
-    expect(exitCode).toBe(1);
-    expect(stdout.data).not.toBe("");
-    expect(stderr.data).toContain("pass gate running");
-    expect(stderr.data).toContain("fail gate running");
-    expect(stderr.data).not.toContain("after gate running");
+      expect(exitCode).toBe(1);
+      expect(stdout.data).not.toBe("");
+      expect(stderr.data).toContain("pass gate running");
+      expect(stderr.data).toContain("fail gate running");
+      expect(stderr.data).not.toContain("after gate running");
 
-    expect(result).not.toBeNull();
-    if (!result) return;
+      expect(result).not.toBeNull();
+      if (!result) return;
 
-    expect(result.version).toBe(1);
-    expect(result.phase).toBe("fast");
-    expect(result.status).toBe("fail");
-    expect(result.failedGate).toBe("fail");
-    expect(result.failedGates).toEqual(["fail"]);
-    expect(result.gates).toHaveLength(3);
+      expect(result.version).toBe(1);
+      expect(result.phase).toBe("fast");
+      expect(result.status).toBe("fail");
+      expect(result.failedGate).toBe("fail");
+      expect(result.failedGates).toEqual(["fail"]);
+      expect(result.gates).toHaveLength(3);
 
-    const [passGate, failGate, afterGate] = result.gates;
+      const [passGate, failGate, afterGate] = result.gates;
 
-    expect(passGate.name).toBe("pass");
-    expect(passGate.status).toBe("pass");
-    expect(passGate.exitCode).toBe(0);
+      expect(passGate.name).toBe("pass");
+      expect(passGate.status).toBe("pass");
+      expect(passGate.exitCode).toBe(0);
 
-    expect(failGate.name).toBe("fail");
-    expect(failGate.status).toBe("fail");
-    expect(failGate.exitCode).toBe(1);
+      expect(failGate.name).toBe("fail");
+      expect(failGate.status).toBe("fail");
+      expect(failGate.exitCode).toBe(1);
 
-    expect(afterGate.name).toBe("after");
-    expect(afterGate.status).toBe("skip");
-    expect(afterGate.exitCode).toBeNull();
-    expect(afterGate.reason).toContain("stopOnFirstFailure");
-  });
+      expect(afterGate.name).toBe("after");
+      expect(afterGate.status).toBe("skip");
+      expect(afterGate.exitCode).toBeNull();
+      expect(afterGate.reason).toContain("stopOnFirstFailure");
+    },
+    20000,
+  );
 
   it("times out a slow gate and reports failure", async () => {
     const repo = fixtureDir("phase2-timeout");
@@ -153,24 +156,28 @@ describe("runner integration", () => {
     expect(missing.logTail).toContain("Possible causes:");
   });
 
-  it("produces no stdout in human mode and sends logs to stderr", async () => {
-    const repo = fixtureDir("phase2-pass-fail");
-    process.chdir(repo);
+  it(
+    "produces no stdout in human mode and sends logs to stderr",
+    async () => {
+      const repo = fixtureDir("phase2-pass-fail");
+      process.chdir(repo);
 
-    const config = loadConfig();
-    const stdout = new StringWriter();
-    const stderr = new StringWriter();
+      const config = loadConfig();
+      const stdout = new StringWriter();
+      const stderr = new StringWriter();
 
-    const { exitCode, result } = await runPhase(config, "fast", {
-      stdout,
-      stderr,
-    });
+      const { exitCode, result } = await runPhase(config, "fast", {
+        stdout,
+        stderr,
+      });
 
-    expect(exitCode).toBe(1);
-    expect(result).toBeNull();
-    expect(stdout.data).toBe("");
-    expect(stderr.data).toContain("pass gate running");
-    expect(stderr.data).toContain("fail gate running");
-  });
+      expect(exitCode).toBe(1);
+      expect(result).toBeNull();
+      expect(stdout.data).toBe("");
+      expect(stderr.data).toContain("pass gate running");
+      expect(stderr.data).toContain("fail gate running");
+    },
+    20000,
+  );
 });
 

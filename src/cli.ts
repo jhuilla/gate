@@ -3,8 +3,8 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadConfig, ConfigError } from "./config";
-import { runPhase } from "./runner";
+import { loadConfig, ConfigError } from "./config.js";
+import { runPhase } from "./runner.js";
 
 export type ExitCode = 0 | 1 | 2;
 
