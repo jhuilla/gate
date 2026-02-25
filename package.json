@@ -7,6 +7,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "prepare": "pnpm build",
     "start": "node dist/cli.js",
     "dev": "tsc && node dist/cli.js",
     "test": "vitest",
