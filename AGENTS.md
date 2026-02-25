@@ -7,8 +7,7 @@ Instructions for AI agents (and humans) working on this repo.
 - **Source of truth:** [PLAN.md](PLAN.md) defines the goal, config format, JSON contract, bundle format, exit codes, and build phases.
 - **When a phase is complete:** If you are satisfied that a phase’s implementation meets its exit criteria and tests pass, update PLAN.md: change the phase heading from `(TODO)` to `(DONE)` (e.g. `### Phase 2 — Runner (DONE)`). Optionally add a short note under that phase describing what was done.
 - **Build order:** Implement phases in order (0 → 1 → 2 → …). Each phase’s “Tests first” and “Exit” criteria are the definition of done.
-- **Phase 2.5+ self-gating rule:** Before you change any phase at or after **Phase 2.5 — Self-gating** from `(TODO)` to `(DONE)`, you must:
-  - Run `pnpm test -- --run` and ensure the suite is green.
+- **Self-gating:** Before you change any phase `(TODO)` to `(DONE)`, you must:
   - Run `pnpm build`.
   - From the repo root, run `node dist/cli.js run fast` (using this repo’s own `gate.config.yml`) and require it to exit 0. Do not mark the phase as `(DONE)` if this self-gate fails.
 
