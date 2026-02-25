@@ -384,7 +384,7 @@ Across all phases, follow **TDD**:
   - This repo can successfully run `gate run fast` and `gate run fast --format json` against itself and behave exactly as a “regular” TS repo would.
   - A CI job (even if minimal) exists that runs `gate run fast` on this repo and will fail if gates fail, making `gate` self-gating in practice.
 
-### Phase 3 — tsc parser (TODO)
+### Phase 3 — tsc parser (DONE)
 
 - **Tests first**
   - Unit tests for `parse.ts` that:

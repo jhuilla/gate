@@ -1,0 +1,19 @@
+version: 1
+
+phases:
+  fast:
+    - typecheck
+    - other
+
+gates:
+  typecheck:
+    command: node typecheck.js
+    timeout: 10
+  other:
+    command: node other.js
+    timeout: 10
+
+options:
+  logTailLines: 50
+  stopOnFirstFailure: false
+

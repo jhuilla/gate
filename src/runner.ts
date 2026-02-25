@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 import type { CliIO, ExitCode } from "./cli.js";
 import { type GateConfig, type GateResultConfig, ConfigError } from "./config.js";
+import { parseTscHighlights } from "./parse.js";
 
 export interface PhaseResult {
   version: 1;
@@ -106,6 +107,7 @@ async function runSingleGate(
       let status: GateResultConfig["status"];
       let exitCode: number | null;
       let logTail = tailLines(buffer, logTailLines);
+      let highlights: GateResultConfig["highlights"] = [];
 
       if (timedOut) {
         status = "fail";
@@ -130,6 +132,12 @@ async function runSingleGate(
       } else {
         status = "fail";
         exitCode = code ?? 1;
+
+        const isTscGate =
+          name === "typecheck" || /\btsc\b/.test(command);
+        if (isTscGate) {
+          highlights = parseTscHighlights(buffer);
+        }
       }
 
       const result: GateResultConfig = {
@@ -138,7 +146,7 @@ async function runSingleGate(
         command,
         exitCode,
         durationMs,
-        highlights: [],
+        highlights,
         logTail,
       };
 

@@ -157,6 +157,61 @@ describe("runner integration", () => {
   });
 
   it(
+    "parses tsc output into highlights for the typecheck gate only",
+    async () => {
+      const repo = fixtureDir("phase3-tsc-parser");
+      process.chdir(repo);
+
+      const config = loadConfig();
+      const stdout = new StringWriter();
+      const stderr = new StringWriter();
+
+      const { exitCode, result } = await runPhase(
+        config,
+        "fast",
+        { stdout, stderr },
+        { format: "json" },
+      );
+
+      expect(exitCode).toBe(1);
+      expect(result).not.toBeNull();
+      if (!result) return;
+
+      expect(result.gates).toHaveLength(2);
+
+      const [typecheckGate, otherGate] = result.gates;
+
+      expect(typecheckGate.name).toBe("typecheck");
+      expect(typecheckGate.status).toBe("fail");
+      expect(typecheckGate.highlights).toHaveLength(3);
+      expect(typecheckGate.highlights[0]).toMatchObject({
+        file: "src/foo.ts",
+        line: 42,
+        col: 13,
+        tool: "tsc",
+      });
+      expect(typecheckGate.highlights[1]).toMatchObject({
+        file: "src/foo.ts",
+        line: 51,
+        col: 5,
+        tool: "tsc",
+      });
+      expect(typecheckGate.highlights[2]).toMatchObject({
+        file: "src/foo.ts",
+        line: 60,
+        col: 1,
+        tool: "tsc",
+      });
+
+      expect(otherGate.name).toBe("other");
+      expect(otherGate.status).toBe("fail");
+      expect(otherGate.highlights).toEqual([]);
+      expect(otherGate.logTail).toContain("other gate running");
+    },
+    20000,
+  );
+
+  it(
     "produces no stdout in human mode and sends logs to stderr",
     async () => {
       const repo = fixtureDir("phase2-pass-fail");
