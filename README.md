@@ -103,6 +103,81 @@ For an interactive repair loop with Claude, you can also run `gate claude bundle
 
 ---
 
+## Agent loop integration
+
+You can plug Gate into an autonomous agent loop (e.g. Ralph, claudeloop, or a custom orchestrator) by treating it as a hard gate before advancing to the next step.
+
+- **Contract**
+  - **Command**: `gate claude bundle <phase>`
+  - **Exit codes**:
+    - `0`: all gates in the phase passed; stdout is empty.
+    - `1`: one or more gates failed; stdout contains a self-contained repair bundle suitable for Claude or similar agents.
+    - `2`: config or runtime error in Gate itself; treat as an infrastructure failure rather than a code-fix task.
+  - **Streams**:
+    - `stderr`: human-readable progress and logs (safe to print to console).
+    - `stdout`: bundle text only on exit code `1`, otherwise empty.
+
+- **Typical loop (pseudocode)**
+
+  ```ts
+  // Run inside the target repo
+  while (true) {
+    const { exitCode, stdout } = await runCommand("npx gate claude bundle fast");
+
+    if (exitCode === 0) {
+      // Gates passed; safe to move on to the next phase of your agentic workflow.
+      break;
+    }
+
+    if (exitCode === 2) {
+      // Config/runtime error in Gate; surface to the operator instead of asking the agent to fix it.
+      throw new Error("Gate config/runtime error:\n" + stdout);
+    }
+
+    // exitCode === 1: one or more gates failed.
+    // stdout is the repair bundle; send it to your coding agent and apply the returned patch.
+    const bundle = stdout;
+
+    const agentResponse = await callCodingAgent({
+      system: "You are a coding agent that fixes repos so that Gate passes.",
+      bundle, // pass the bundle as user content
+    });
+
+    await applyPatchFromAgent(agentResponse);
+    // Loop will rerun `gate claude bundle fast` after the patch.
+  }
+  ```
+
+If you prefer structured data, you can instead call `gate run <phase> --format json`, inspect `failedGate`, `failedGates`, and `gates[].highlights` to build your own prompt, and still use the same exit-code contract.
+
+---
+
+### Example: wiring Gate into Ralph locally
+
+Ralph is designed to be copied and customized in your repo. The minimal local change is to swap its “quality checks” step in `ralph.sh` for a Gate call.
+
+Very roughly, find the place where it currently runs its checks (simplified example):
+
+```bash
+# Before: ad-hoc checks
+npm test && npm run lint && npm run typecheck
+```
+
+and replace it with:
+
+```bash
+# After: Gate is the single source of truth for checks
+npx gate claude bundle fast
+if [ "$?" -ne 0 ]; then
+  echo "Gate failed for this story. Fix the repo until 'npx gate claude bundle fast' exits 0."
+  exit 1
+fi
+```
+
+You can then have your agent loop (or Ralph’s prompt) feed the printed bundle back into Claude Code or another coding agent, apply the patch, and rerun the same `npx gate claude bundle fast` command until it exits 0.
+
+---
+
 ## Local development
 
 - **Install dependencies**
