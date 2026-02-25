@@ -399,7 +399,7 @@ Across all phases, follow **TDD**:
 - **Exit (all green)**
   - Typecheck failures show structured highlights in JSON and bundle, and all parser tests pass.
 
-### Phase 4 — Claude bundle (TODO)
+### Phase 4 — Claude bundle (DONE)
 
 - **Tests first**
   - Unit tests for `bundle.ts` that:

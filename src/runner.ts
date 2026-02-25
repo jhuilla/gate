@@ -17,6 +17,7 @@ export interface PhaseResult {
 
 export interface RunPhaseOptions {
   format?: "json";
+  returnResult?: boolean;
 }
 
 const MAX_LOG_BYTES = 500 * 1024; // ~500KB
@@ -263,6 +264,10 @@ export async function runPhase(
 
   if (options.format === "json") {
     io.stdout.write(`${JSON.stringify(phaseResult)}\n`);
+    return { exitCode, result: phaseResult };
+  }
+
+  if (options.returnResult) {
     return { exitCode, result: phaseResult };
   }
 

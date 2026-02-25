@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig, ConfigError } from "./config.js";
 import { runPhase } from "./runner.js";
+import { renderClaudeBundle } from "./bundle.js";
 
 export type ExitCode = 0 | 1 | 2;
 
@@ -158,8 +159,54 @@ export async function runCli(args: string[], io: CliIO): Promise<ExitCode> {
       io.stderr.write("Missing phase name. Usage: gate claude bundle <phase>\n");
       return 2;
     }
-    io.stderr.write(`claude bundle stub (phase: ${phase})\n`);
-    return 0;
+
+    const originalCwd = process.cwd();
+
+    let config;
+    try {
+      config = loadConfig();
+    } catch (err) {
+      if (err instanceof ConfigError) {
+        io.stderr.write(`${(err as Error).message}\n`);
+        return 2;
+      }
+      io.stderr.write(
+        `Unexpected error loading config: ${(err as Error).message}\n`,
+      );
+      return 2;
+    }
+
+    const configFilePath = resolve(originalCwd, "gate.config.yml");
+    const repoRoot = dirname(configFilePath);
+
+    process.chdir(repoRoot);
+    try {
+      const { exitCode, result } = await runPhase(config, phase, io, {
+        returnResult: true,
+      });
+
+      if (exitCode === 0 || !result) {
+        return 0;
+      }
+
+      const bundle = renderClaudeBundle(result, config);
+      if (bundle) {
+        io.stdout.write(bundle);
+      }
+
+      return 1;
+    } catch (err) {
+      if (err instanceof ConfigError) {
+        io.stderr.write(`${(err as Error).message}\n`);
+        return 2;
+      }
+      io.stderr.write(
+        `Unexpected error running phase: ${(err as Error).message}\n`,
+      );
+      return 2;
+    } finally {
+      process.chdir(originalCwd);
+    }
   }
 
   io.stderr.write(`Unknown command '${cmd}'.\n`);

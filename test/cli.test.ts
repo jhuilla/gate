@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { runCli, type CliIO } from "../src/cli";
 import { Writable } from "node:stream";
 import { mkdtempSync, writeFileSync, readFileSync, existsSync } from "node:fs";
@@ -27,6 +27,10 @@ function createIO(): { io: CliIO; stdout: StringWriter; stderr: StringWriter } {
 
 describe("CLI bootstrap behavior", () => {
   const originalCwd = process.cwd();
+
+  beforeEach(() => {
+    process.chdir(originalCwd);
+  });
 
   afterEach(() => {
     process.chdir(originalCwd);
@@ -125,15 +129,6 @@ describe("CLI bootstrap behavior", () => {
     expect(stderr.data.trim()).toBe("Missing phase name. Usage: gate run <phase>");
   });
 
-  it("runs claude bundle stub with phase and exits 0", async () => {
-    const { io, stdout, stderr } = createIO();
-    const code = await runCli(["claude", "bundle", "pr"], io);
-
-    expect(code).toBe(0);
-    expect(stdout.data).toBe("");
-    expect(stderr.data.trim()).toBe("claude bundle stub (phase: pr)");
-  });
-
   it("errors with exit 2 for unknown command", async () => {
     const { io, stdout, stderr } = createIO();
     const code = await runCli(["unknown"], io);
@@ -141,6 +136,24 @@ describe("CLI bootstrap behavior", () => {
     expect(code).toBe(2);
     expect(stdout.data).toBe("");
     expect(stderr.data.trim()).toBe("Unknown command 'unknown'.");
+  });
+
+  it("runs claude bundle on a failing phase and writes bundle to stdout", async () => {
+    const repo = resolvePath(__dirname, "fixtures", "phase3-tsc-parser");
+    process.chdir(repo);
+
+    const { io, stdout, stderr } = createIO();
+    const code = await runCli(["claude", "bundle", "fast"], io);
+
+    expect(code).toBe(1);
+    expect(stderr.data).toContain("Type 'X' is not assignable to type 'Y'.");
+
+    expect(stdout.data).toContain("GATE FAILED: typecheck");
+    expect(stdout.data).toContain("PHASE: fast");
+    expect(stdout.data).toContain("━━━ FAILED GATE ━━━");
+    expect(stdout.data).toContain("Gate:    typecheck");
+    expect(stdout.data).toContain("HIGHLIGHTS:");
+    expect(stdout.data).toContain("LOG TAIL:");
   });
 });
 
