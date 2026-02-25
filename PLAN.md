@@ -206,7 +206,7 @@ GATE FAILED: typecheck
 PHASE: pr
 
 To fix this repo, make the smallest change that causes this command to pass:
-  gate run pr
+  pnpm exec gate run pr
 
 ━━━ FAILED GATE ━━━
 Gate:    typecheck
@@ -223,7 +223,7 @@ LOG TAIL:
 When multiple gates fail in a single run (e.g. with `stopOnFirstFailure: false`), the bundle repeats the **FAILED GATE → HIGHLIGHTS → LOG TAIL** block once per failed gate, in phase order.
 
 ━━━ NEXT ━━━
-After making edits, the harness will rerun `gate run pr`.
+After making edits, the harness will rerun `pnpm exec gate run pr`.
 You do not need to run tests yourself.
 
 ━━━ RULES ━━━

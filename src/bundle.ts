@@ -68,7 +68,7 @@ export function renderClaudeBundle(
   lines.push(
     "To fix this repo, make the smallest change that causes this command to pass:",
   );
-  lines.push(`  gate run ${phaseResult.phase}`);
+  lines.push(`  pnpm exec gate run ${phaseResult.phase}`);
   lines.push("");
 
   for (const gateName of phaseResult.failedGates) {
@@ -78,7 +78,7 @@ export function renderClaudeBundle(
 
   lines.push("━━━ NEXT ━━━");
   lines.push(
-    "After making edits, the harness will rerun `gate run pr`.",
+    "After making edits, the harness will rerun `pnpm exec gate run pr`.",
   );
   lines.push("You do not need to run tests yourself.");
   lines.push("");

@@ -67,7 +67,7 @@ describe("Claude bundle renderer", () => {
     expect(text).toContain(
       "To fix this repo, make the smallest change that causes this command to pass:",
     );
-    expect(text).toContain("  gate run pr");
+    expect(text).toContain("  pnpm exec gate run pr");
 
     expect(text).toContain("━━━ FAILED GATE ━━━");
     expect(text).toContain("Gate:    typecheck");
@@ -89,7 +89,7 @@ describe("Claude bundle renderer", () => {
 
     expect(text).toContain("━━━ NEXT ━━━");
     expect(text).toContain(
-      "After making edits, the harness will rerun `gate run pr`.",
+      "After making edits, the harness will rerun `pnpm exec gate run pr`.",
     );
     expect(text).toContain("You do not need to run tests yourself.");
 
