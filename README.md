@@ -18,7 +18,7 @@ From a typical TS repo root:
 - **Install Gate**
 
   ```bash
-  pnpm add -D gate
+  pnpm add -D git+https://github.com/jhuilla/gate.git
   ```
 
 - **Create a config**
