@@ -414,7 +414,7 @@ Across all phases, follow **TDD**:
 - **Exit (all green)**
   - The manual loop works end-to-end at least once with a real Claude session, and the bundle tests pass.
 
-### Phase 5 — Polish (TODO)
+### Phase 5 — Polish (DONE)
 
 - **Tests first**
   - Lightweight tests or scripts that:
@@ -425,7 +425,7 @@ Across all phases, follow **TDD**:
   - Write and polish the README quickstart and CI examples.
   - Adjust CLI ergonomics and messaging as needed to keep the tests passing.
 - **Exit (all green)**
-  - Docs and examples reflect the actual behavior of the tool, and the high-level integration tests remain green.
+  - Docs and examples reflect the actual behavior of the tool, and the high-level integration tests (including README quickstart and CI snippet flows) remain green.
 
 ---
 

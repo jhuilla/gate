@@ -222,6 +222,5 @@ async function main(): Promise<void> {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  // eslint-disable-next-line @typescript-eslint/no-floating-promises
   main();
 }
